@@ -8,6 +8,9 @@ $sql = "SELECT id, title, author_name, created_at FROM posts WHERE status = 'pub
 $stmt = $con->prepare($sql);
 $stmt->execute();
 $posts = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+$catStmt = $con->query("SELECT id, name FROM categories ORDER BY name");
+$categories = $catStmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
 <!DOCTYPE html>
@@ -40,5 +43,18 @@ $posts = $stmt->fetchAll(PDO::FETCH_ASSOC);
 		<hr>
 	<?php endforeach; ?>
 <?php endif; ?>
+
+<label>Category:</label>
+<select name="category_id" required>
+	<option value="">Select Category</option>
+	<?php foreach($categories as $cat): ?>
+	<option value="<?php echo $cat['id']; ?>">
+		<?php echo htmlspecialchars($cat['name']); ?>
+	</option>
+	<?php endforeach; ?>	
+</select><br><br>
+<label>Tags (comma separated):</label><br>
+<input type="text" name="tags" placeholder="php, mysql, cms"><br><br>
+
 </body>
 </html>
