@@ -1,4 +1,7 @@
 <?php
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
+
 require __DIR__ . '/../config/db.php';
 
 $con = dbConnect();
@@ -17,6 +20,18 @@ $post = $postStmt->fetch(PDO::FETCH_ASSOC);
 
 if(!$post) {
 	die("Post not found.");
+}
+
+$categoryIdsStmt = $con->prepare("SELECT category_id FROM post_categories WHERE post_id = ?");
+$categoryIdsStmt->execute([$postID]);
+$categoryIds = $categoryIdsStmt->fetchAll(PDO::FETCH_COLUMN);
+
+$categories = [];
+if(!empty($categoryIds)) {
+	$in = implode(',', array_fill(0, count($categoryIds), '?'));
+	$categorystmt = $con->prepare("SELECT name FROM categories WHERE id IN ($in)");
+	$categorystmt->execute($categoryIds);
+	$categories = $categorystmt->fetchAll(PDO::FETCH_COLUMN);
 }
 
 $commentSql = "SELECT author_name, comment_text, created_at FROM comments WHERE post_id = ? ORDER BY created_at DESC";
@@ -38,12 +53,21 @@ $comments = $commentStmt->fetchAll(PDO::FETCH_ASSOC);
 <article>
 	<h1><?php echo htmlspecialchars($post['title'], ENT_QUOTES, 'UTF-8'); ?></h1>
 	<a href="edit.php?id=<?php echo $postID; ?>">Edit Post</a>
+	<a href="delete.php?id=<?php echo $postID; ?>" onclick="return confirm('Are you sure you want to delete this post?');">Delete Post</a>
+
 
 
 	<p>
 		By <?php echo htmlspecialchars($post['author_name'], ENT_QUOTES, 'UTF-8'); ?>
 		| <?php echo date("F j, Y", strtotime($post['created_at'])); ?>
 	</p>
+
+	<?php if(!empty($categories)): ?>
+		<p>
+			<strong>Categories:</strong>
+			<?php echo htmlspecialchars(implode(', ', $categories), ENT_QUOTES, 'UTF-8'); ?>
+		</p>
+	<?php endif; ?>
 
 	<div>
 		<?php echo nl2br(htmlspecialchars($post['content'], ENT_QUOTES, 'UTF-8')); ?>

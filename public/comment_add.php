@@ -15,6 +15,6 @@ $sql = "INSERT INTO comments (post_id, author_name, comment_text) VALUES (?, ?, 
 $stmt = $con->prepare($sql);
 $stmt->execute([$postId, $name, $comment]);
 
-header("Location: add.php?id=" . $postId);
+header("Location: post.php?id=" . $postId);
 exit;
 ?>

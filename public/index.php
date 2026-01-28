@@ -31,7 +31,7 @@ $categories = $catStmt->fetchAll(PDO::FETCH_ASSOC);
 	<?php foreach ($posts as $post): ?> 
 		<article>
 			<h2>
-				<a href="add.php?id=<?php echo $post['id']; ?>">
+				<a href="post.php?id=<?php echo $post['id']; ?>">
 					<?php echo htmlspecialchars($post['title'], ENT_QUOTES, 'UTF-8'); ?>
 				</a>
 			</h2>
@@ -43,18 +43,6 @@ $categories = $catStmt->fetchAll(PDO::FETCH_ASSOC);
 		<hr>
 	<?php endforeach; ?>
 <?php endif; ?>
-
-<label>Category:</label>
-<select name="category_id" required>
-	<option value="">Select Category</option>
-	<?php foreach($categories as $cat): ?>
-	<option value="<?php echo $cat['id']; ?>">
-		<?php echo htmlspecialchars($cat['name']); ?>
-	</option>
-	<?php endforeach; ?>	
-</select><br><br>
-<label>Tags (comma separated):</label><br>
-<input type="text" name="tags" placeholder="php, mysql, cms"><br><br>
 
 </body>
 </html>

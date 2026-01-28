@@ -1,4 +1,7 @@
 <?php
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
+
 require __DIR__ . '/../config/db.php';
 $con = dbConnect();
 
@@ -15,6 +18,13 @@ $stmt = $con->prepare($sql);
 $stmt->execute([$postID]);
 $post = $stmt->fetch(PDO::FETCH_ASSOC);
 
+$allCategoriesStmt = $con->query("SELECT id, name FROM categories");
+$allCategories = $allCategoriesStmt->fetchAll(PDO::FETCH_ASSOC);
+
+$assignedCategoriesStmt = $con->prepare("SELECT category_id FROM post_categories WHERE post_id = ?");
+$assignedCategoriesStmt->execute([$postID]);
+$assignedCategories = $assignedCategoriesStmt->fetchAll(PDO::FETCH_COLUMN);
+
 if (!$post) {
     die("Post not found.");
 }
@@ -27,11 +37,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (empty($title) || empty($content)) {
         $error = "All fields are required.";
     } else {
+        
         $updateSql = "UPDATE posts SET title = ?, content = ? WHERE id = ?";
         $updateStmt = $con->prepare($updateSql);
         $updateStmt->execute([$title, $content, $postID]);
 
-        header("Location: add.php?id=" . $postID);
+        
+        if(isset($_POST['categories'])) {
+            $selectedCategories = $_POST['categories'];
+
+            $deleteStmt = $con->prepare("DELETE FROM post_categories WHERE post_id = ?");
+            $deleteStmt->execute([$postID]);
+
+            $insertStmt = $con->prepare("INSERT INTO post_categories (post_id, category_id) VALUES (?, ?)");
+            foreach($selectedCategories as $catID) {
+                $insertStmt->execute([$postID, $catID]);
+            }
+        } else {
+            
+            $deleteStmt = $con->prepare("DELETE FROM post_categories WHERE post_id = ?");
+            $deleteStmt->execute([$postID]);
+        }
+
+        header("Location: post.php?id=" . $postID);
         exit;
     }
 }
@@ -46,8 +74,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </head>
 <body>
 
-<a href="add.php?id=<?php echo $postID; ?>">← Back to Post</a>
-<a href="delete.php?id=<? echo $postID?>" onclick="return confirm('Are you sure you want to delete this post?');">Delete Post</a>
+<a href="post.php?id=<?php echo $postID; ?>">← Back to Post</a>
+
 
 <h1>Edit Post</h1>
 
@@ -66,7 +94,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         echo htmlspecialchars($post['content'], ENT_QUOTES, 'UTF-8');
     ?></textarea><br><br>
 
+        <h3>Categories:</h3>
+    <?php foreach($allCategories as $category): ?>
+        <label>
+            <input type="checkbox" name="categories[]" value="<?php echo $category['id']; ?>"
+            <?php echo in_array($category['id'], $assignedCategories) ? 'checked' : ''; ?>>
+            <?php echo htmlspecialchars($category['name'], ENT_QUOTES, 'UTF-8'); ?>
+        </label><br>
+    <?php endforeach; ?>
+
     <button type="submit">Update Post</button>
+
+
 </form>
 
 </body>
