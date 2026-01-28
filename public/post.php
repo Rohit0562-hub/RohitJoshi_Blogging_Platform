@@ -1,6 +1,4 @@
 <?php
-ini_set('display_errors', 1);
-error_reporting(E_ALL);
 
 require __DIR__ . '/../config/db.php';
 
@@ -32,6 +30,18 @@ if(!empty($categoryIds)) {
 	$categorystmt = $con->prepare("SELECT name FROM categories WHERE id IN ($in)");
 	$categorystmt->execute($categoryIds);
 	$categories = $categorystmt->fetchAll(PDO::FETCH_COLUMN);
+}
+
+$tagIdsStmt = $con->prepare("SELECT tag_id FROM post_tags WHERE post_id = ?");
+$tagIdsStmt->execute([$postID]);
+$tagIds = $tagIdsStmt->fetchAll(PDO::FETCH_COLUMN);
+
+$tags = [];
+if(!empty($tagIds)){
+	$in = implode(',', array_fill(0, count($tagIds), '?'));
+	$tagStmt = $con->prepare("SELECT name FROM tags WHERE id IN ($in)");
+	$tagStmt->execute($tagIds);
+	$tags = $tagStmt->fetchAll(PDO::FETCH_COLUMN);
 }
 
 $commentSql = "SELECT author_name, comment_text, created_at FROM comments WHERE post_id = ? ORDER BY created_at DESC";
@@ -66,6 +76,13 @@ $comments = $commentStmt->fetchAll(PDO::FETCH_ASSOC);
 		<p>
 			<strong>Categories:</strong>
 			<?php echo htmlspecialchars(implode(', ', $categories), ENT_QUOTES, 'UTF-8'); ?>
+		</p>
+	<?php endif; ?>
+
+	<?php if(!empty($tags)): ?>
+		<p>
+			<strong>Tags:</strong>
+			<?php echo htmlspecialchars(implode(', ', $tags), ENT_QUOTES, 'UTF-8'); ?>
 		</p>
 	<?php endif; ?>
 
