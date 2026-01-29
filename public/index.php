@@ -1,9 +1,15 @@
 <?php
-
+ini_set('display_errors', 1); 
+error_reporting(E_ALL);
+require __DIR__ . '/../includes/session.php';
+require __DIR__ . '/../includes/auth.php';
 require __DIR__ . '/../config/db.php';
+
+requireLogin();
+
 $con = dbConnect();
 
-$sql = "SELECT id, title, author_name, created_at FROM posts WHERE status = 'published' ORDER BY created_at DESC";
+$sql = "SELECT id, user_id, title, created_at FROM posts WHERE status = 'published' ORDER BY created_at DESC";
 
 $stmt = $con->prepare($sql);
 $stmt->execute();
@@ -36,7 +42,7 @@ $categories = $catStmt->fetchAll(PDO::FETCH_ASSOC);
 				</a>
 			</h2>
 			<p>
-				By <?php echo htmlspecialchars($post['author_name'], ENT_QUOTES, 'UTF-8'); ?>
+				<!-- By <?php echo htmlspecialchars($post['author_name'], ENT_QUOTES, 'UTF-8'); ?> -->
 				| <?php echo date("F j, Y", strtotime($post['created_at'])); ?>
 			</p>
 		</article>

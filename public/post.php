@@ -1,6 +1,11 @@
 <?php
-
+ini_set('display_errors', 1); 
+error_reporting(E_ALL);
+require __DIR__ . '/../includes/session.php';
+require __DIR__ . '/../includes/auth.php';
 require __DIR__ . '/../config/db.php';
+
+requireLogin();
 
 $con = dbConnect();
 
@@ -10,7 +15,7 @@ if(!isset($_GET['id']) || !is_numeric($_GET['id'])) {
 
 $postID = (int) $_GET['id'];
 
-$postSql = "SELECT title, content, author_name, created_at FROM posts WHERE id = ? AND status = 'published'";
+$postSql = "SELECT id, user_id, title, content, created_at FROM posts WHERE id = ? AND status = 'published'";
 
 $postStmt = $con->prepare($postSql);
 $postStmt->execute([$postID]);
@@ -20,6 +25,11 @@ if(!$post) {
 	die("Post not found.");
 }
 
+$userStmt = $con->prepare("SELECT email FROM users WHERE id = ?");
+$userStmt->execute([$post['user_id']]);
+$author = $userStmt->fetch(PDO::FETCH_ASSOC);
+$authorName = $author ? $author['email'] : 'Unknown';
+
 $categoryIdsStmt = $con->prepare("SELECT category_id FROM post_categories WHERE post_id = ?");
 $categoryIdsStmt->execute([$postID]);
 $categoryIds = $categoryIdsStmt->fetchAll(PDO::FETCH_COLUMN);
@@ -27,9 +37,9 @@ $categoryIds = $categoryIdsStmt->fetchAll(PDO::FETCH_COLUMN);
 $categories = [];
 if(!empty($categoryIds)) {
 	$in = implode(',', array_fill(0, count($categoryIds), '?'));
-	$categorystmt = $con->prepare("SELECT name FROM categories WHERE id IN ($in)");
-	$categorystmt->execute($categoryIds);
-	$categories = $categorystmt->fetchAll(PDO::FETCH_COLUMN);
+	$categoryStmt = $con->prepare("SELECT name FROM categories WHERE id IN ($in)");
+	$categoryStmt->execute($categoryIds);
+	$categories = $categoryStmt->fetchAll(PDO::FETCH_COLUMN);
 }
 
 $tagIdsStmt = $con->prepare("SELECT tag_id FROM post_tags WHERE post_id = ?");
@@ -44,10 +54,22 @@ if(!empty($tagIds)){
 	$tags = $tagStmt->fetchAll(PDO::FETCH_COLUMN);
 }
 
-$commentSql = "SELECT author_name, comment_text, created_at FROM comments WHERE post_id = ? ORDER BY created_at DESC";
+$commentSql = "SELECT id, user_id, comment_text, created_at FROM comments WHERE post_id = ? ORDER BY created_at DESC";
 $commentStmt = $con->prepare($commentSql);
 $commentStmt->execute([$postID]);
 $comments = $commentStmt->fetchAll(PDO::FETCH_ASSOC);
+
+foreach ($comments as &$comment) {
+    $cUserStmt = $con->prepare("SELECT email FROM users WHERE id = ?");
+    $cUserStmt->execute([$comment['user_id']]);
+    $cUser = $cUserStmt->fetch(PDO::FETCH_ASSOC);
+    $comment['author_email'] = $cUser ? $cUser['email'] : 'Unknown';
+}
+unset($comment);
+
+$canEdit = isLoggedIn() && (
+    isAdmin() || $_SESSION['user_id'] === $post['user_id']
+);
 ?>
 
 <!DOCTYPE html>
@@ -62,13 +84,15 @@ $comments = $commentStmt->fetchAll(PDO::FETCH_ASSOC);
 	<a href="index.php">Back to Posts</a>
 <article>
 	<h1><?php echo htmlspecialchars($post['title'], ENT_QUOTES, 'UTF-8'); ?></h1>
+
+<?php if ($canEdit): ?>
 	<a href="edit.php?id=<?php echo $postID; ?>">Edit Post</a>
 	<a href="delete.php?id=<?php echo $postID; ?>" onclick="return confirm('Are you sure you want to delete this post?');">Delete Post</a>
-
+<?php endif; ?>
 
 
 	<p>
-		By <?php echo htmlspecialchars($post['author_name'], ENT_QUOTES, 'UTF-8'); ?>
+		By <?php echo htmlspecialchars($authorName, ENT_QUOTES, 'UTF-8'); ?>
 		| <?php echo date("F j, Y", strtotime($post['created_at'])); ?>
 	</p>
 
@@ -99,16 +123,19 @@ $comments = $commentStmt->fetchAll(PDO::FETCH_ASSOC);
 
 		<?php foreach($comments as $comment): ?>
 			<div style="margin-bottom: 15px;">
-				<strong>
-					<?php echo htmlspecialchars($comment['author_name'], ENT_QUOTES, 'UTF-8'); ?>
-				</strong>
-				<br>
 				<small>
 					<?php echo date("F j, Y, g:i a", strtotime($comment['created_at'])); ?>
 				</small>
 				<p>
 					<?php echo nl2br(htmlspecialchars($comment['comment_text'], ENT_QUOTES, 'UTF-8')); ?>
 				</p>
+
+				<?php if(isLoggedIn() && ($_SESSION['role'] === 'admin' || $_SESSION['user_id'] === $comment['user_id'])): ?>
+
+				<a href="comment_edit.php?id=<?php echo $comment['id']; ?>">Edit</a>
+				|
+				<a href="comment_delete.php?id=<?php echo comment['id']; ?>" onclick="return confirm('Delete this comment?');">Delete</a>
+			<?php endif; ?>
 			</div>
 			<hr>
 		<?php endforeach; ?>

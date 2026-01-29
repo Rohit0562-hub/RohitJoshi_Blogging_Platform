@@ -1,6 +1,12 @@
 <?php
-
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
+require __DIR__ . '/../includes/session.php';
+require __DIR__ . '/../includes/auth.php';
 require __DIR__ . '/../config/db.php';
+
+requireLogin();
+
 $con = dbConnect();
 
 $catStmt = $con->query("SELECT id, name FROM categories");
@@ -9,41 +15,46 @@ $categories = $catStmt->fetchAll(PDO::FETCH_ASSOC);
 $tagStmt = $con->query("SELECT id, name FROM tags");
 $tags = $tagStmt->fetchAll(PDO::FETCH_ASSOC);
 
+$userId = $_SESSION['user_id'];
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-	$title = trim($_POST['title']);
-	$content = trim($_POST['content']);
-	$author = trim($_POST['author_name']);
+    $title = trim($_POST['title']);
+    $content = trim($_POST['content']);
 
-	if(empty($title) || empty($content) || empty($author)) {
-		$error = "All fields are required.";
+    if (empty($title) || empty($content)) {
+        $error = "Title and content are required.";
+    } else {
+        $postSql = "INSERT INTO posts (user_id, title, content, status, created_at)
+                    VALUES (?, ?, ?, 'published', NOW())";
 
-	} else {
-		$postSql = "INSERT INTO posts (title, content, author_name, status, created_at) VALUES (?, ?, ?, 'published', NOW())";
+        $postStmt = $con->prepare($postSql);
+        $postStmt->execute([$userId, $title, $content]);
 
-		$postStmt = $con->prepare($postSql);
-		$postStmt->execute([$title, $content, $author]);
+        $postID = $con->lastInsertId();
 
-		$postID = $con->lastInsertId();
+        if (!empty($_POST['categories'])) {
+            $catInsert = $con->prepare(
+                "INSERT INTO post_categories (post_id, category_id) VALUES (?, ?)"
+            );
+            foreach ($_POST['categories'] as $catID) {
+                $catInsert->execute([$postID, $catID]);
+            }
+        }
 
-		if(!empty($_POST['categories'])) {
-			$catInsert = $con->prepare("INSERT INTO post_categories (post_id, category_id) VALUES (?, ?)");
-			foreach ($_POST['categories'] as $catID) {
-				$catInsert->execute([$postID, $catID]);
-			}
+        if (!empty($_POST['tags'])) {
+            $tagInsert = $con->prepare(
+                "INSERT INTO post_tags (post_id, tag_id) VALUES (?, ?)"
+            );
+            foreach ($_POST['tags'] as $tagID) {
+                $tagInsert->execute([$postID, $tagID]);
+            }
+        }
 
-		}
-
-		if(!empty($_POST['tags'])) {
-			$tagInsert = $con->prepare("INSERT INTO post_tags (post_id, tag_id) VALUES (?, ?)");
-			foreach ($_POST['tags'] as $tagID) {
-				$tagInsert->execute([$postID, $tagID]);
-			}
-		}
-
-		header("Location: post.php?id=" . $postID);
-		exit;
-	}
+        header("Location: post.php?id=" . $postID);
+        exit;
+    }
 }
+
 ?>
 
 <!DOCTYPE html>
@@ -64,8 +75,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <?php endif; ?>
 
 <form method="POST">
-	<label>Author Name:</label><br>
-	<input type="text" name="author_name" required><br><br>
 
 	<label>Title:</label><br>
 	<input type="text" name="title" required><br><br>

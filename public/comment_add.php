@@ -1,19 +1,24 @@
 <?php
-
+ini_set('display_errors', 1); 
+error_reporting(E_ALL);
+require __DIR__ . '/../includes/session.php';
+require __DIR__ . '/../includes/auth.php';
 require __DIR__ . '/../config/db.php';
+
+requireLogin();
+
 $con = dbConnect();
 
-if (empty($_POST['post_id']) || empty($_POST['author_name']) || empty($_POST['comment_text'])) {
-	die("All fields are required.");
-}
-
 $postId = (int) $_POST['post_id'];
-$name = trim($_POST['author_name']);
 $comment = trim($_POST['comment_text']);
 
-$sql = "INSERT INTO comments (post_id, author_name, comment_text) VALUES (?, ?, ?)";
+if (empty($comment)) {
+    die("Comment cannot be empty.");
+}
+
+$sql = "INSERT INTO comments (post_id, user_id, comment_text, created_at) VALUES (?, ?, ?, NOW())";
 $stmt = $con->prepare($sql);
-$stmt->execute([$postId, $name, $comment]);
+$stmt->execute([$postId, $_SESSION['user_id'], $comment]);
 
 header("Location: post.php?id=" . $postId);
 exit;

@@ -1,7 +1,16 @@
 <?php
+ini_set('display_errors', 1); 
+error_reporting(E_ALL);
 
+require __DIR__ . '/../includes/session.php';
+require __DIR__ . '/../includes/auth.php';
 require __DIR__ . '/../config/db.php';
+
+requireLogin();
+
 $con = dbConnect();
+
+$error = '';
 
 if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
     die("Invalid post ID.");
@@ -9,11 +18,16 @@ if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
 
 $postID = (int) $_GET['id'];
 
-/* Fetch post */
-$sql = "SELECT title, content FROM posts WHERE id = ?";
+$sql = "SELECT title, content, user_id FROM posts WHERE id = ?";
 $stmt = $con->prepare($sql);
 $stmt->execute([$postID]);
 $post = $stmt->fetch(PDO::FETCH_ASSOC);
+
+if (!$post) {
+    die("Post not found.");
+}
+
+requireOwnerOrAdmin($post['user_id']);
 
 $allCategoriesStmt = $con->query("SELECT id, name FROM categories");
 $allCategories = $allCategoriesStmt->fetchAll(PDO::FETCH_ASSOC);
@@ -29,12 +43,16 @@ $assignedTagsStmt = $con->prepare("SELECT tag_id FROM post_tags WHERE post_id = 
 $assignedTagsStmt->execute([$postID]);
 $assignedTags = $assignedTagsStmt->fetchAll(PDO::FETCH_COLUMN);
 
-if (!$post) {
-    die("Post not found.");
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
 
-
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+
+    if (!isset($_POST['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
+        die ("Invalid CSRF Token");
+    }
+
     $title = trim($_POST['title']);
     $content = trim($_POST['content']);
 
@@ -42,35 +60,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = "All fields are required.";
     } else {
         
+        // Update post
         $updateSql = "UPDATE posts SET title = ?, content = ? WHERE id = ?";
         $updateStmt = $con->prepare($updateSql);
         $updateStmt->execute([$title, $content, $postID]);
 
-        
-        if(isset($_POST['categories'])) {
-            $selectedCategories = $_POST['categories'];
+        // Update categories
+        $deleteCategoryStmt = $con->prepare("DELETE FROM post_categories WHERE post_id = ?");
+        $deleteCategoryStmt->execute([$postID]);
 
-            $deleteCategoryStmt = $con->prepare("DELETE FROM post_categories WHERE post_id = ?");
-            $deleteCategoryStmt->execute([$postID]);
-
+        if(!empty($_POST['categories'])) {
             $insertCategoryStmt = $con->prepare("INSERT INTO post_categories (post_id, category_id) VALUES (?, ?)");
-            foreach($selectedCategories as $catID) {
+            foreach($_POST['categories'] as $catID) {
                 $insertCategoryStmt->execute([$postID, $catID]);
             }
-        } else {
-            
-            $deleteCategoryStmt = $con->prepare("DELETE FROM post_categories WHERE post_id = ?");
-            $deleteCategoryStmt->execute([$postID]);
         }
 
+        // Update tags
         $deleteTagStmt = $con->prepare("DELETE FROM post_tags WHERE post_id = ?");
         $deleteTagStmt->execute([$postID]);
 
-        if(isset($_POST['tags'])) {
-            $selectedTags = $_POST['tags'];
-
+        if(!empty($_POST['tags'])) {
             $insertTagStmt = $con->prepare("INSERT INTO post_tags (post_id, tag_id) VALUES (?, ?)");
-            foreach($selectedTags as $tagID) {
+            foreach($_POST['tags'] as $tagID) {
                 $insertTagStmt->execute([$postID, $tagID]);
             }
         }
@@ -90,8 +102,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </head>
 <body>
 
-<a href="post.php?id=<?php echo $postID; ?>">← Back to Post</a>
-
+<a href="post.php?id=<?php echo $postID; ?>">Back to Post</a>
 
 <h1>Edit Post</h1>
 
@@ -100,15 +111,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <?php endif; ?>
 
 <form method="POST">
+    <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
+
     <label>Title:</label><br>
-    <input type="text" name="title"
-           value="<?php echo htmlspecialchars($post['title'], ENT_QUOTES, 'UTF-8'); ?>"
-           required><br><br>
+    <input type="text" name="title" value="<?php echo htmlspecialchars($post['title'], ENT_QUOTES, 'UTF-8'); ?>" required><br><br>
 
     <label>Content:</label><br>
-    <textarea name="content" rows="10" required><?php
-        echo htmlspecialchars($post['content'], ENT_QUOTES, 'UTF-8');
-    ?></textarea><br><br>
+    <textarea name="content" rows="10" required><?php echo htmlspecialchars($post['content'],ENT_QUOTES, 'UTF-8'); ?></textarea><br><br>
 
     <h3>Categories:</h3>
     <?php foreach($allCategories as $category): ?>
@@ -128,9 +137,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </label><br>
     <?php endforeach; ?>
 
+    <br>
     <button type="submit">Update Post</button>
-
-
 </form>
 
 </body>
