@@ -9,6 +9,14 @@ requireLogin();
 
 $con = dbConnect();
 
+if($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    die("Invalid Request.");
+}
+
+if (!isset($_POST['post_id'], $_POST['comment_text'])) {
+    die("Required fields missing.");
+}
+
 $postId = (int) $_POST['post_id'];
 $comment = trim($_POST['comment_text']);
 

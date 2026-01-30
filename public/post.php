@@ -25,10 +25,10 @@ if(!$post) {
 	die("Post not found.");
 }
 
-$userStmt = $con->prepare("SELECT email FROM users WHERE id = ?");
+$userStmt = $con->prepare("SELECT username FROM users WHERE id = ?");
 $userStmt->execute([$post['user_id']]);
 $author = $userStmt->fetch(PDO::FETCH_ASSOC);
-$authorName = $author ? $author['email'] : 'Unknown';
+$authorName = $author ? $author['username'] : 'Unknown';
 
 $categoryIdsStmt = $con->prepare("SELECT category_id FROM post_categories WHERE post_id = ?");
 $categoryIdsStmt->execute([$postID]);
@@ -60,10 +60,10 @@ $commentStmt->execute([$postID]);
 $comments = $commentStmt->fetchAll(PDO::FETCH_ASSOC);
 
 foreach ($comments as &$comment) {
-    $cUserStmt = $con->prepare("SELECT email FROM users WHERE id = ?");
+    $cUserStmt = $con->prepare("SELECT username FROM users WHERE id = ?");
     $cUserStmt->execute([$comment['user_id']]);
     $cUser = $cUserStmt->fetch(PDO::FETCH_ASSOC);
-    $comment['author_email'] = $cUser ? $cUser['email'] : 'Unknown';
+    $comment['username'] = $cUser ? $cUser['username'] : 'Unknown';
 }
 unset($comment);
 
@@ -123,6 +123,10 @@ $canEdit = isLoggedIn() && (
 
 		<?php foreach($comments as $comment): ?>
 			<div style="margin-bottom: 15px;">
+				<p>
+					<strong><?php echo htmlspecialchars($comment['username']); ?></strong>
+				</p>
+
 				<small>
 					<?php echo date("F j, Y, g:i a", strtotime($comment['created_at'])); ?>
 				</small>
@@ -134,7 +138,7 @@ $canEdit = isLoggedIn() && (
 
 				<a href="comment_edit.php?id=<?php echo $comment['id']; ?>">Edit</a>
 				|
-				<a href="comment_delete.php?id=<?php echo comment['id']; ?>" onclick="return confirm('Delete this comment?');">Delete</a>
+				<a href="comment_delete.php?id=<?php echo $comment['id']; ?>" onclick="return confirm('Delete this comment?');">Delete</a>
 			<?php endif; ?>
 			</div>
 			<hr>
@@ -145,9 +149,6 @@ $canEdit = isLoggedIn() && (
 
 	<form method="POST" action="comment_add.php">
 		<input type="hidden" name="post_id" value="<?php echo $postID; ?>">
-
-		<label>Name:</label><br>
-		<input type="text" name="author_name" required><br><br>
 
 		<label>Comment:</label><br>
 		<textarea name="comment_text" rows="4" required></textarea><br><br>
