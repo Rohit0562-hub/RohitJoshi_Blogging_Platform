@@ -28,5 +28,3 @@ if (session_status() === PHP_SESSION_NONE) {
 			<?php endif; ?>
 		</nav>
 	</header>
-
-<hr>

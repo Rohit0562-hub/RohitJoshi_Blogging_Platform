@@ -5,13 +5,14 @@ error_reporting(E_ALL);
 require __DIR__ . '/../includes/session.php';
 require __DIR__ . '/../includes/auth.php';
 require __DIR__ . '/../config/db.php';
+require __DIR__ . '/../includes/header.php';
 
 requireLogin();
-require __DIR__ . '/../includes/header.php';
+
 
 $con = dbConnect();
 
-$limit = 5;
+$limit = 10;
 $offset = 0;
 
 $searchInput = isset($_GET['search']) ? trim($_GET['search']) : '';
@@ -58,15 +59,17 @@ unset($post);
 
 <h1>Blog Posts</h1>
 
-<form method="GET" action="index.php">
-    <input type="text" id="searchInput" name="search" placeholder="Search by author or keyword"
-        value="<?php echo htmlspecialchars($searchInput, ENT_QUOTES); ?>">
-    <button type="submit">Search</button>
-</form>
 
-<hr>
+<div class="page-container">
+    <aside class="search-section">
+        <form method="GET" action="index.php">
+            <input type="text" id="searchInput" name="search" placeholder="Search by author or keyword" value="<?php echo htmlspecialchars($searchInput, ENT_QUOTES); ?>">
+            <button type="submit">Search</button>
+        </form>
+    </aside>
 
-<div id="posts-container">
+    <div class="post-section">
+        <div id="post-container">
 <?php if (empty($posts)): ?>
     <p>No posts found.</p>
 <?php else: ?>
@@ -82,7 +85,6 @@ unset($post);
                 | <?php echo date("F j, Y", strtotime($post['created_at'])); ?>
             </p>
         </article>
-        <hr>
     <?php endforeach; ?>
 <?php endif; ?>
 </div>
@@ -90,15 +92,17 @@ unset($post);
 <button id="loadMore" <?php echo empty($posts) ? 'style="display:none"' : ''; ?>>
     Load More
 </button>
+</div>
+</div>
 
 <script>
-let offset = 0;
+let offset = <?php echo count($posts); ?>;
 const limit = <?php echo $limit; ?>;
 let searchValue = '';
 let typingTimer;
 const debounceDelay = 300;
 
-const postsContainer = document.getElementById('posts-container');
+const postsContainer = document.getElementById('post-container');
 const loadMoreBtn = document.getElementById('loadMore');
 const searchInput = document.getElementById('searchInput');
 

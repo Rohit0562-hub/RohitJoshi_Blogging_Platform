@@ -5,6 +5,7 @@ error_reporting(E_ALL);
 require __DIR__ . '/../includes/session.php';
 require __DIR__ . '/../includes/auth.php';
 require __DIR__ . '/../config/db.php';
+require __DIR__ . '/../includes/header.php';
 
 requireLogin();
 

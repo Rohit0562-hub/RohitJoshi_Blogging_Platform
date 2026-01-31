@@ -28,3 +28,4 @@ $deleteStmt->execute([$commentID]);
 
 header("Location: post.php?id=" . $comment['post_id']);
 exit;
+?>

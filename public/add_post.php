@@ -7,6 +7,8 @@ require __DIR__ . '/../config/db.php';
 
 requireLogin();
 
+require __DIR__ . '/../includes/header.php';
+
 $con = dbConnect();
 
 if (empty($_SESSION['csrf_token'])) {
