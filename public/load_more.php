@@ -28,7 +28,9 @@ if ($searchInput !== '') {
     $conditions[] = "title LIKE ?";
     $params[] = '%' . $searchInput . '%';
 
-    $where .= " AND (" . implode(' OR ', $conditions) . ")";
+    if (!empty($conditions)) {
+        $where .= " AND (" . implode(' OR ', $conditions) . ")";
+    }
 }
 
 $params[] = $limit;
@@ -47,7 +49,7 @@ foreach ($posts as &$post) {
 }
 unset($post);
 
-foreach ($post as $posts) {
+foreach ($posts as $post) {
 
     echo '<article>';
     echo '<h2><a href="post.php?id='.$post['id'].'">'.htmlspecialchars($post['title'], ENT_QUOTES).'</a></h2>';

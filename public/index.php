@@ -7,13 +7,13 @@ require __DIR__ . '/../includes/auth.php';
 require __DIR__ . '/../config/db.php';
 
 requireLogin();
+require __DIR__ . '/../includes/header.php';
 
 $con = dbConnect();
 
 $limit = 5;
 $offset = 0;
 
-// Single search input
 $searchInput = isset($_GET['search']) ? trim($_GET['search']) : '';
 
 $posts = [];
@@ -55,19 +55,11 @@ foreach ($posts as &$post) {
 }
 unset($post);
 ?>
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8">
-    <title>Simple Blog CMS</title>
-    <link rel="stylesheet" href="../assets/style.css">
-</head>
-<body>
 
 <h1>Blog Posts</h1>
 
 <form method="GET" action="index.php">
-    <input type="text" name="search" placeholder="Search by author or keyword"
+    <input type="text" id="searchInput" name="search" placeholder="Search by author or keyword"
         value="<?php echo htmlspecialchars($searchInput, ENT_QUOTES); ?>">
     <button type="submit">Search</button>
 </form>
@@ -100,28 +92,55 @@ unset($post);
 </button>
 
 <script>
-let offset = <?php echo count($posts); ?>;
+let offset = 0;
 const limit = <?php echo $limit; ?>;
-const search = "<?php echo htmlspecialchars($searchInput, ENT_QUOTES); ?>";
+let searchValue = '';
+let typingTimer;
+const debounceDelay = 300;
 
-document.getElementById('loadMore').addEventListener('click', () => {
+const postsContainer = document.getElementById('posts-container');
+const loadMoreBtn = document.getElementById('loadMore');
+const searchInput = document.getElementById('searchInput');
+
+function fetchPosts(reset = false) {
     let url = `load_more.php?offset=${offset}&limit=${limit}`;
-    if (search) url += `&search=${encodeURIComponent(search)}`;
+
+    if (searchValue) {
+        url += `&search=${encodeURIComponent(searchValue)}`;
+    }
 
     fetch(url)
         .then(res => res.text())
         .then(html => {
+            if (reset) {
+                postsContainer.innerHTML = '';
+                offset = 0;
+            }
+
             if (html.trim() === '') {
-                document.getElementById('loadMore').style.display = 'none';
+                loadMoreBtn.style.display = 'none';
             } else {
-                document.getElementById('posts-container')
-                    .insertAdjacentHTML('beforeend', html);
+                postsContainer.insertAdjacentHTML('beforeend', html);
+                loadMoreBtn.style.display = 'block';
                 offset += limit;
             }
         })
         .catch(err => console.error(err));
+}
+
+searchInput.addEventListener('input', () => {
+    clearTimeout(typingTimer);
+
+    typingTimer = setTimeout(() => {
+        searchValue = searchInput.value.trim();
+        offset = 0;
+        fetchPosts(true);
+    }, debounceDelay);
+});
+
+loadMoreBtn.addEventListener('click', () => {
+    fetchPosts(false);
 });
 </script>
 
-</body>
-</html>
+<?php require __DIR__ . '/../includes/footer.php'; ?>
