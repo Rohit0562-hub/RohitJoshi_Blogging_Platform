@@ -88,16 +88,8 @@ $canEdit = isLoggedIn() && (
 
 <?php if ($canEdit): ?>
 	<a href="edit.php?id=<?php echo $postID; ?>">Edit Post</a>
-
-	<form method="POST" action="delete.php" style="display:inline;">
-		<input type="hidden" name="id" value="<?php echo $postID; ?>">
-		<input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
-		<button type="submit" onclick="return confirm('Are you sure you want to delete this post?');">
-			Delete Post
-		</button>
-	</form>
+	<a href="delete.php?id=<?php echo $postID; ?>" onclick="return confirm('Are you sure you want to delete this post?');">Delete Post</a>
 <?php endif; ?>
-
 
 
 	<p>
@@ -147,22 +139,16 @@ $canEdit = isLoggedIn() && (
 
 				<a href="comment_edit.php?id=<?php echo $comment['id']; ?>">Edit</a>
 				|
-				<form method="POST" action="comment_delete.php" style="display:inline;">
-    <input type="hidden" name="id" value="<?php echo $comment['id']; ?>">
-    <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
-    <button type="submit" onclick="return confirm('Delete this comment?')">Delete</button>
-</form>
-
+				<a href="comment_delete.php?id=<?php echo $comment['id']; ?>" onclick="return confirm('Delete this comment?');">Delete</a>
 			<?php endif; ?>
 			</div>
+
 		<?php endforeach; ?>
 	<?php endif; ?>
 
 	<h3>Add a Comment</h3>
 
 	<form method="POST" action="comment_add.php">
-		<input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
-
 		<input type="hidden" name="post_id" value="<?php echo $postID; ?>">
 
 		<label>Comment:</label><br>
