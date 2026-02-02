@@ -1,9 +1,9 @@
 <?php
 
 function dbConnect() {
-	$server = "mysql:host=localhost;dbname=blog_cms;charset=utf8mb4";
-	$user = "root";
-	$password = "";
+	$server = "mysql:host=localhost;dbname=np03cs4a240374;charset=utf8mb4";
+	$user = "np03cs4a240374";
+	$password = "BDj2wAAdHG";
 
 	try {
 		$options = [
